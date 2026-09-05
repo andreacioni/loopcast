@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>DLNA Resume Player</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header>
+    <h1>DLNA Resume Player</h1>
+    <button id="discoverBtn">Rescan network</button>
+  </header>
+
+  <main>
+    <section id="deviceBar">
+      <label>
+        Library
+        <select id="serverSelect"></select>
+      </label>
+      <label>
+        Play on
+        <select id="rendererSelect"></select>
+      </label>
+    </section>
+
+    <section id="nowPlaying" class="hidden">
+      <h2 id="npTitle"></h2>
+      <div id="npControls">
+        <button id="pauseBtn">Pause / Play</button>
+        <button id="stopBtn">Stop</button>
+        <span id="npPosition"></span>
+      </div>
+      <p id="npResumeNote"></p>
+    </section>
+
+    <nav id="breadcrumbs"></nav>
+
+    <section id="browser">
+      <ul id="itemList"></ul>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
