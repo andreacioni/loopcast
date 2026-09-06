@@ -3,12 +3,12 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>DLNA Resume Player</title>
+<title>LoopCast</title>
 <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <header>
-    <h1>DLNA Resume Player</h1>
+    <h1>LoopCast</h1>
     <button id="discoverBtn">Rescan network</button>
   </header>
 
@@ -40,6 +40,18 @@
       <ul id="itemList"></ul>
     </section>
   </main>
+
+  <!-- Custom confirm dialog, replaces window.confirm -->
+  <div id="modalOverlay" class="hidden">
+    <div id="modalBox" role="dialog" aria-modal="true">
+      <h3 id="modalTitle"></h3>
+      <p id="modalMessage"></p>
+      <div id="modalActions"></div>
+    </div>
+  </div>
+
+  <!-- Lightweight toast, replaces window.alert -->
+  <div id="toast" class="hidden"></div>
 
   <script src="app.js"></script>
 </body>

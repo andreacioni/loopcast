@@ -3,7 +3,7 @@ const state = {
   renderers: [],
   currentServerUsn: null,
   currentRendererUsn: null,
-  path: [{ id: "0", title: "Root" }],
+  path: [{ id: "0", title: "Root" }], // breadcrumb stack
 };
 
 const el = (id) => document.getElementById(id);
@@ -94,7 +94,7 @@ async function refreshDevices() {
       loadFolder("0");
     }
   } catch (err) {
-    console.warn(`Device refresh failed: ${err.message}`);
+    showToast(`Device refresh failed: ${err.message}`);
   }
 }
 
@@ -104,7 +104,7 @@ async function rescanNow() {
     await api("/api/devices/rescan", { method: "POST" });
     await refreshDevices();
   } catch (err) {
-    alert(`Rescan failed: ${err.message}`);
+    showToast(`Discovery failed: ${err.message}`);
   } finally {
     el("discoverBtn").textContent = "Rescan now";
   }
@@ -200,10 +200,29 @@ function renderList({ containers, items }) {
 
   items.forEach((item) => {
     const li = document.createElement("li");
-    const resumeBadge = item.resume
-      ? `<span class="badge">resume ${formatSeconds(item.resume.position)}</span>`
-      : "";
-    li.innerHTML = `<span>&#127916; ${item.title}</span>${resumeBadge}`;
+    li.className = "media-item";
+
+    // Only show progress once we actually have a saved position AND a
+    // known duration -- without a duration we can't compute a percentage,
+    // so leave the row exactly as it looks for a never-played title.
+    let progressHtml = "";
+    if (item.resume && item.resume.position > 0 && item.resume.duration > 0) {
+      const pct = Math.min(
+        100,
+        (item.resume.position / item.resume.duration) * 100,
+      );
+      progressHtml = `
+        <div class="progress-wrap">
+          <div class="progress-track"><div class="progress-fill" style="width:${pct}%"></div></div>
+          <span class="progress-time">${formatSeconds(item.resume.position)} / ${formatSeconds(item.resume.duration)}</span>
+        </div>`;
+    }
+
+    li.innerHTML = `
+      <div class="item-main">
+        <span class="item-title">&#127916; ${item.title}</span>
+        ${progressHtml}
+      </div>`;
     li.addEventListener("click", () => playItem(item));
     list.appendChild(li);
   });

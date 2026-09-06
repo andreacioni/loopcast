@@ -148,7 +148,7 @@ app.get("/api/resumable", (req, res) => {
 });
 
 const server = app.listen(PORT, "0.0.0.0", () => {
-  console.log(`DLNA resume control point running at http://<pi-ip>:${PORT}`);
+  console.log(`LoopCast control point running at http://<pi-ip>:${PORT}`);
   autoDiscovery.start({ intervalMs: 30000 });
 });
 

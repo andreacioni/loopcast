@@ -1,4 +1,4 @@
-# DLNA Resume Player
+# LoopCast
 
 A minimal control point that sits between MiniDLNA (your library) and a DLNA
 renderer (smart TV, etc.), adding one thing MiniDLNA lacks: **remembering
