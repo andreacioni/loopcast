@@ -17,6 +17,69 @@ async function api(path, opts) {
   return res.json();
 }
 
+// --- Toast (replaces window.alert) --------------------------------------
+
+let toastTimer = null;
+
+function showToast(message, type = "error") {
+  const toast = el("toast");
+  toast.textContent = message;
+  toast.className = `${type}`; // 'error' | 'info'
+  // force reflow so repeated toasts re-trigger the transition
+  void toast.offsetWidth;
+  toast.classList.remove("hidden");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toast.classList.add("hidden"), 4000);
+}
+
+// --- Confirm modal (replaces window.confirm) ----------------------------
+
+/**
+ * Shows a modal with an arbitrary set of action buttons and resolves with
+ * the `value` of whichever action was clicked, or null if dismissed via
+ * the overlay/Escape. Always gives the user an explicit way out, unlike
+ * window.confirm's OK/Cancel-only shape.
+ */
+function showModal({ title = "", message = "", actions = [] }) {
+  return new Promise((resolve) => {
+    const overlay = el("modalOverlay");
+    const actionsEl = el("modalActions");
+
+    el("modalTitle").textContent = title;
+    el("modalMessage").textContent = message;
+    actionsEl.innerHTML = "";
+
+    let settled = false;
+    const finish = (value) => {
+      if (settled) return;
+      settled = true;
+      overlay.classList.add("hidden");
+      overlay.removeEventListener("click", onOverlayClick);
+      document.removeEventListener("keydown", onKeydown);
+      resolve(value);
+    };
+
+    const onOverlayClick = (e) => {
+      if (e.target === overlay) finish(null);
+    };
+    const onKeydown = (e) => {
+      if (e.key === "Escape") finish(null);
+    };
+
+    actions.forEach((action) => {
+      const btn = document.createElement("button");
+      btn.textContent = action.label;
+      btn.className = action.variant || "secondary";
+      btn.addEventListener("click", () => finish(action.value));
+      actionsEl.appendChild(btn);
+    });
+
+    overlay.addEventListener("click", onOverlayClick);
+    document.addEventListener("keydown", onKeydown);
+    overlay.classList.remove("hidden");
+  });
+}
+
 // Cheap poll against the background auto-discovery cache. No scanning
 // happens here, so this is safe to call frequently.
 async function refreshDevices() {
@@ -148,15 +211,24 @@ function renderList({ containers, items }) {
 
 async function playItem(item) {
   if (!state.currentRendererUsn) {
-    alert("Pick a renderer first.");
+    showToast("Pick a renderer first.");
     return;
   }
 
   let resume = false;
   if (item.resume && item.resume.position > 5) {
-    resume = confirm(
-      `Resume "${item.title}" at ${formatSeconds(item.resume.position)}? Cancel to start over.`,
-    );
+    const choice = await showModal({
+      title: "Resume playback?",
+      message: `"${item.title}" was last stopped at ${formatSeconds(item.resume.position)}.`,
+      actions: [
+        { label: "Cancel", value: "cancel", variant: "secondary" },
+        { label: "Start over", value: "restart", variant: "secondary" },
+        { label: "Resume", value: "resume", variant: "primary" },
+      ],
+    });
+
+    if (choice === null || choice === "cancel") return; // user backed out entirely
+    resume = choice === "resume";
   }
 
   try {
@@ -176,7 +248,7 @@ async function playItem(item) {
     });
     showNowPlaying(item.title);
   } catch (err) {
-    alert(`Playback failed: ${err.message}`);
+    showToast(`Playback failed: ${err.message}`);
   }
 }
 
@@ -230,24 +302,32 @@ el("rendererSelect").addEventListener("change", (e) => {
   state.currentRendererUsn = e.target.value;
 });
 el("pauseBtn").addEventListener("click", async () => {
-  await api("/api/control", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      rendererUsn: state.currentRendererUsn,
-      action: "pause",
-    }),
-  }).catch((err) => alert(err.message));
+  try {
+    await api("/api/control", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        rendererUsn: state.currentRendererUsn,
+        action: "pause",
+      }),
+    });
+  } catch (err) {
+    showToast(err.message);
+  }
 });
 el("stopBtn").addEventListener("click", async () => {
-  await api("/api/control", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      rendererUsn: state.currentRendererUsn,
-      action: "stop",
-    }),
-  }).catch((err) => alert(err.message));
+  try {
+    await api("/api/control", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        rendererUsn: state.currentRendererUsn,
+        action: "stop",
+      }),
+    });
+  } catch (err) {
+    showToast(err.message);
+  }
   el("nowPlaying").classList.add("hidden");
   clearInterval(statusTimer);
 });
