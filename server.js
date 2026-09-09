@@ -88,10 +88,15 @@ app.post("/api/play", async (req, res) => {
     resume,
   } = req.body;
   const device = discovery.getCached(rendererUsn);
-  if (!device)
-    return res
-      .status(404)
-      .json({ error: "Unknown renderer; call /api/devices first" });
+  if (!device) return res.status(404).json({ error: "Unknown renderer" });
+
+  if (device.kind !== "renderer") {
+    return res.status(400).json({ error: "Device is not a renderer" });
+  }
+
+  if (device.status !== "online") {
+    return res.status(400).json({ error: "Renderer is offline" });
+  }
 
   try {
     const saved = getResume(itemId);

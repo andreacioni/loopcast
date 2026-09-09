@@ -98,6 +98,12 @@ async function refreshDevices() {
   }
 }
 
+async function refreshStatus() {
+  if (statusTimer) clearInterval(statusTimer);
+  statusTimer = setInterval(pollStatus, 5000);
+  pollStatus();
+}
+
 async function rescanNow() {
   el("discoverBtn").textContent = "Scanning...";
   try {
@@ -265,7 +271,6 @@ async function playItem(item) {
         resume,
       }),
     });
-    showNowPlaying(item.title);
   } catch (err) {
     showToast(`Playback failed: ${err.message}`);
   }
@@ -278,9 +283,6 @@ function showNowPlaying(title) {
   el("npTitle").textContent = title;
   el("npResumeNote").textContent = "";
   state.reportedResumeAt = null;
-  if (statusTimer) clearInterval(statusTimer);
-  statusTimer = setInterval(pollStatus, 5000);
-  pollStatus();
 }
 
 async function pollStatus() {
@@ -289,6 +291,7 @@ async function pollStatus() {
     const s = await api(
       `/api/status?rendererUsn=${encodeURIComponent(state.currentRendererUsn)}`,
     );
+    showNowPlaying(s.title);
     el("npPosition").textContent =
       `${formatSeconds(s.position)} / ${formatSeconds(s.duration)}`;
 
@@ -352,4 +355,5 @@ el("stopBtn").addEventListener("click", async () => {
 });
 
 refreshDevices();
+refreshStatus();
 setInterval(refreshDevices, 8000); // pick up online/offline flips from the background scanner
