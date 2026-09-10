@@ -4,6 +4,7 @@ const state = {
   currentServerUsn: null,
   currentRendererUsn: null,
   path: [{ id: "0", title: "Root" }], // breadcrumb stack
+  currentItems: [], // items in the currently browsed folder, for queue building
 };
 
 const el = (id) => document.getElementById(id);
@@ -92,6 +93,7 @@ async function refreshDevices() {
     if (hadNoServer && state.currentServerUsn) {
       state.path = [{ id: "0", title: "Root" }];
       loadFolder("0");
+      loadHome();
     }
   } catch (err) {
     showToast(`Device refresh failed: ${err.message}`);
@@ -159,8 +161,90 @@ async function loadFolder(objectId) {
   const data = await api(
     `/api/browse?serverUsn=${encodeURIComponent(state.currentServerUsn)}&objectId=${encodeURIComponent(objectId)}`,
   );
+  state.currentItems = data.items;
   renderBreadcrumbs();
   renderList(data);
+}
+
+// --- Continue watching carousel -----------------------------------------
+
+async function loadHome() {
+  if (!state.currentServerUsn) return;
+  try {
+    const { cards } = await api(
+      `/api/home?serverUsn=${encodeURIComponent(state.currentServerUsn)}`,
+    );
+    renderContinueWatching(cards);
+  } catch (err) {
+    // Non-critical -- just hide the carousel if it can't be built.
+    renderContinueWatching([]);
+  }
+}
+
+function renderContinueWatching(cards) {
+  const section = el("continueWatching");
+  const track = el("continueWatchingTrack");
+  track.innerHTML = "";
+
+  if (!cards.length) {
+    section.classList.add("hidden");
+    return;
+  }
+  section.classList.remove("hidden");
+
+  cards.forEach((card) => {
+    const div = document.createElement("div");
+    div.className = "cw-card";
+
+    const { item } = card;
+    let progressHtml = "";
+    if (item.resume && item.resume.position > 0 && item.resume.duration > 0) {
+      const pct = Math.min(
+        100,
+        (item.resume.position / item.resume.duration) * 100,
+      );
+      progressHtml = `
+        <div class="progress-wrap">
+          <div class="progress-track"><div class="progress-fill" style="width:${pct}%"></div></div>
+          <span class="progress-time">${formatSeconds(item.resume.position)} / ${formatSeconds(item.resume.duration)}</span>
+        </div>`;
+    }
+
+    div.innerHTML = `
+      <span class="cw-folder">&#128193; ${card.folderTitle}</span>
+      <span class="cw-title">&#127916; ${item.title}</span>
+      ${progressHtml}
+      ${card.queue.length ? `<span class="cw-queue-note">+${card.queue.length} up next</span>` : ""}`;
+
+    div.addEventListener("click", () => resumeCard(card));
+    track.appendChild(div);
+  });
+}
+
+async function resumeCard(card) {
+  if (!state.currentRendererUsn) {
+    showToast("Pick a renderer first.");
+    return;
+  }
+  try {
+    await api("/api/play", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        rendererUsn: state.currentRendererUsn,
+        itemId: card.item.id,
+        title: card.item.title,
+        mediaUrl: card.item.mediaUrl,
+        mimeType: card.item.mimeType,
+        dlnaFeatures: card.item.dlnaFeatures,
+        mediaKind: card.item.mediaKind,
+        resume: true,
+        queue: card.queue,
+      }),
+    });
+  } catch (err) {
+    showToast(`Playback failed: ${err.message}`);
+  }
 }
 
 function renderBreadcrumbs() {
@@ -256,6 +340,14 @@ async function playItem(item) {
     resume = choice === "resume";
   }
 
+  // Queue the rest of the folder (alphabetical order) after this item so
+  // playback continues automatically once it finishes.
+  const sortedSiblings = [...state.currentItems].sort((a, b) =>
+    (a.title || "").localeCompare(b.title || ""),
+  );
+  const currentIdx = sortedSiblings.findIndex((i) => i.id === item.id);
+  const queue = currentIdx === -1 ? [] : sortedSiblings.slice(currentIdx + 1);
+
   try {
     await api("/api/play", {
       method: "POST",
@@ -269,6 +361,7 @@ async function playItem(item) {
         dlnaFeatures: item.dlnaFeatures,
         mediaKind: item.mediaKind,
         resume,
+        queue,
       }),
     });
   } catch (err) {
@@ -319,6 +412,7 @@ el("serverSelect").addEventListener("change", (e) => {
   state.currentServerUsn = e.target.value;
   state.path = [{ id: "0", title: "Root" }];
   loadFolder("0");
+  loadHome();
 });
 el("rendererSelect").addEventListener("change", (e) => {
   state.currentRendererUsn = e.target.value;

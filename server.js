@@ -74,6 +74,85 @@ app.get("/api/browse", async (req, res) => {
   }
 });
 
+// --- Homepage: "continue watching" carousel ---------------------------
+
+// Item ids encode their parent folder path (item_id.split("$")[0:-1]),
+// so we don't need any extra columns in the resume table to group saved
+// positions by folder -- we group in memory and re-browse each folder to
+// pick up fresh mediaUrl/mimeType and the sibling items to queue next.
+app.get("/api/home", async (req, res) => {
+  const { serverUsn } = req.query;
+  const device = discovery.getCached(serverUsn);
+  if (!device)
+    return res
+      .status(404)
+      .json({ error: "Unknown server; call /api/devices first" });
+
+  try {
+    const controlURL = contentDirectoryUrl(device);
+
+    // Only titles that are actually in-progress (not finished, not
+    // untouched) make sense as "continue watching" entries.
+    const inProgress = listResumable().filter(
+      (r) => r.duration > 0 && r.position > 5 && r.position < r.duration * 0.95,
+    );
+
+    const latestPerFolder = new Map(); // folderId -> resume row
+    for (const r of inProgress) {
+      const parts = r.item_id.split("$");
+      const folderId = parts.slice(0, -1).join("$") || "0";
+      const existing = latestPerFolder.get(folderId);
+      if (!existing || r.updated_at > existing.updated_at) {
+        latestPerFolder.set(folderId, r);
+      }
+    }
+
+    const folders = [...latestPerFolder.entries()].sort(
+      (a, b) => b[1].updated_at - a[1].updated_at,
+    );
+
+    const cards = (
+      await Promise.all(
+        folders.map(async ([folderId, resumeRow]) => {
+          try {
+            const [folderMeta, siblings] = await Promise.all([
+              contentDirectory.getMetadata(controlURL, folderId),
+              contentDirectory.browse(controlURL, folderId, { count: 500 }),
+            ]);
+
+            const sortedItems = [...siblings.items].sort((a, b) =>
+              (a.title || "").localeCompare(b.title || ""),
+            );
+            const currentIdx = sortedItems.findIndex(
+              (i) => i.id === resumeRow.item_id,
+            );
+            if (currentIdx === -1) return null; // item no longer exists
+
+            const current = sortedItems[currentIdx];
+            const queue = sortedItems.slice(currentIdx + 1);
+
+            return {
+              folderId,
+              folderTitle: folderMeta?.title || "Unknown folder",
+              item: { ...current, resume: resumeRow },
+              queue,
+            };
+          } catch (err) {
+            console.error(
+              `Failed to build home card for folder ${folderId}: ${err.message}`,
+            );
+            return null;
+          }
+        }),
+      )
+    ).filter(Boolean);
+
+    res.json({ cards });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // --- Playback control --------------------------------------------------
 
 app.post("/api/play", async (req, res) => {
@@ -86,6 +165,7 @@ app.post("/api/play", async (req, res) => {
     dlnaFeatures,
     mediaKind,
     resume,
+    queue,
   } = req.body;
   const device = discovery.getCached(rendererUsn);
   if (!device) return res.status(404).json({ error: "Unknown renderer" });
@@ -109,6 +189,7 @@ app.post("/api/play", async (req, res) => {
       dlnaFeatures,
       mediaKind,
       resumeSeconds,
+      queue,
     });
     res.json({ ok: true, resumedAt: resumeSeconds });
   } catch (err) {
