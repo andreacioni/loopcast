@@ -94,7 +94,9 @@ app.get("/api/home", async (req, res) => {
     // Only titles that are actually in-progress (not finished, not
     // untouched) make sense as "continue watching" entries.
     const inProgress = listResumable().filter(
-      (r) => r.duration > 0 && r.position > 5 && r.position < r.duration * 0.95,
+      (r) =>
+        r.duration > 0 &&
+        r.position > 10 /**&& r.position < r.duration * 0.95**/,
     );
 
     const latestPerFolder = new Map(); // folderId -> resume row
