@@ -30,7 +30,32 @@ app.get("/api/devices", (req, res) => {
   res.json({
     servers: devices.filter((d) => d.kind === "server"),
     renderers: devices.filter((d) => d.kind === "renderer"),
+    discovery: discovery.getJoinStatus(),
   });
+});
+
+// Enable or cancel device join mode (when enabled, newly discovered devices
+// are saved to the persistent store; when disabled, only known devices are tracked).
+app.post("/api/devices/discovery", async (req, res) => {
+  try {
+    const { enabled, durationMs = 60000 } = req.body;
+    const status = discovery.setJoinAllowed(Boolean(enabled), durationMs);
+    if (status.enabled) {
+      // Trigger a scan immediately so the user doesn't wait for the next background tick
+      discovery.discover(4000).catch((err) => {
+        console.error(`Discovery sweep failed: ${err.message}`);
+      });
+    }
+    const devices = discovery.allCached();
+    res.json({
+      ok: true,
+      discovery: status,
+      servers: devices.filter((d) => d.kind === "server"),
+      renderers: devices.filter((d) => d.kind === "renderer"),
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // Optional manual override for "scan now" instead of waiting for the
@@ -41,6 +66,7 @@ app.post("/api/devices/rescan", async (req, res) => {
     res.json({
       servers: devices.filter((d) => d.kind === "server"),
       renderers: devices.filter((d) => d.kind === "renderer"),
+      discovery: discovery.getJoinStatus(),
     });
   } catch (err) {
     res.status(500).json({ error: err.message });

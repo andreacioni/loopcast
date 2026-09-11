@@ -5,6 +5,8 @@ const state = {
   currentRendererUsn: null,
   path: [{ id: "0", title: "Root" }], // breadcrumb stack
   currentItems: [], // items in the currently browsed folder, for queue building
+  discoveryEnabled: false,
+  discoveryRemainingSeconds: 0,
 };
 
 const el = (id) => document.getElementById(id);
@@ -85,11 +87,16 @@ function showModal({ title = "", message = "", actions = [] }) {
 // happens here, so this is safe to call frequently.
 async function refreshDevices() {
   try {
-    const { servers, renderers } = await api("/api/devices");
+    const { servers, renderers, discovery: disc } = await api("/api/devices");
     const hadNoServer = !state.currentServerUsn;
     state.servers = servers;
     state.renderers = renderers;
     renderDeviceSelects();
+
+    if (disc) {
+      syncDiscoveryUi(disc.enabled, disc.remainingSeconds);
+    }
+
     if (hadNoServer && state.currentServerUsn) {
       state.path = [{ id: "0", title: "Root" }];
       loadFolder("0");
@@ -100,22 +107,84 @@ async function refreshDevices() {
   }
 }
 
+let discoveryTimer = null;
+
+function syncDiscoveryUi(enabled, remainingSeconds = 0) {
+  state.discoveryEnabled = enabled;
+  state.discoveryRemainingSeconds = remainingSeconds;
+  const btn = el("discoverBtn");
+
+  if (!enabled || remainingSeconds <= 0) {
+    if (discoveryTimer) {
+      clearInterval(discoveryTimer);
+      discoveryTimer = null;
+    }
+    state.discoveryEnabled = false;
+    state.discoveryRemainingSeconds = 0;
+    btn.textContent = "Enable discovery";
+    btn.classList.remove("active");
+    return;
+  }
+
+  btn.textContent = `Allow join (${remainingSeconds}s)`;
+  btn.classList.add("active");
+
+  if (!discoveryTimer) {
+    discoveryTimer = setInterval(() => {
+      state.discoveryRemainingSeconds -= 1;
+      if (state.discoveryRemainingSeconds <= 0) {
+        clearInterval(discoveryTimer);
+        discoveryTimer = null;
+        state.discoveryEnabled = false;
+        btn.textContent = "Enable discovery";
+        btn.classList.remove("active");
+        refreshDevices();
+      } else {
+        btn.textContent = `Allow join (${state.discoveryRemainingSeconds}s)`;
+      }
+    }, 1000);
+  }
+}
+
+async function toggleDiscovery() {
+  const btn = el("discoverBtn");
+  if (state.discoveryEnabled) {
+    try {
+      await api("/api/devices/discovery", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ enabled: false }),
+      });
+      syncDiscoveryUi(false, 0);
+      showToast("Discovery mode cancelled", "info");
+      await refreshDevices();
+    } catch (err) {
+      showToast(`Failed to cancel discovery: ${err.message}`);
+    }
+  } else {
+    try {
+      btn.textContent = "Starting...";
+      const res = await api("/api/devices/discovery", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ enabled: true, durationMs: 60000 }),
+      });
+      const remaining = res.discovery?.remainingSeconds || 60;
+      syncDiscoveryUi(true, remaining);
+      showToast("Discovery enabled for 60s", "info");
+      setTimeout(refreshDevices, 1500);
+      setTimeout(refreshDevices, 4500);
+    } catch (err) {
+      btn.textContent = "Enable discovery";
+      showToast(`Failed to enable discovery: ${err.message}`);
+    }
+  }
+}
+
 async function refreshStatus() {
   if (statusTimer) clearInterval(statusTimer);
   statusTimer = setInterval(pollStatus, 5000);
   pollStatus();
-}
-
-async function rescanNow() {
-  el("discoverBtn").textContent = "Scanning...";
-  try {
-    await api("/api/devices/rescan", { method: "POST" });
-    await refreshDevices();
-  } catch (err) {
-    showToast(`Discovery failed: ${err.message}`);
-  } finally {
-    el("discoverBtn").textContent = "Rescan now";
-  }
 }
 
 function renderDeviceSelects() {
@@ -407,7 +476,7 @@ async function pollStatus() {
   }
 }
 
-el("discoverBtn").addEventListener("click", rescanNow);
+el("discoverBtn").addEventListener("click", toggleDiscovery);
 el("serverSelect").addEventListener("change", (e) => {
   state.currentServerUsn = e.target.value;
   state.path = [{ id: "0", title: "Root" }];

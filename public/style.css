@@ -24,6 +24,12 @@ button {
   font-size: 0.9rem;
 }
 button:hover { background: #2563eb; }
+#discoverBtn.active {
+  background: #dc2626;
+}
+#discoverBtn.active:hover {
+  background: #b91c1c;
+}
 main { padding: 1.5rem; max-width: 800px; margin: 0 auto; }
 #deviceBar {
   display: flex;
