@@ -132,6 +132,9 @@ select {
   background: #3b82f6;
   border-radius: 999px;
 }
+.progress-fill.progress-complete {
+  background: #22c55e;
+}
 .progress-time {
   font-size: 0.75rem;
   color: #9ab;
