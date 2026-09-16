@@ -192,6 +192,8 @@ app.post("/api/play", async (req, res) => {
     mimeType,
     dlnaFeatures,
     mediaKind,
+    duration,
+    size,
     resume,
     queue,
   } = req.body;
@@ -218,6 +220,8 @@ app.post("/api/play", async (req, res) => {
       mediaKind,
       resumeSeconds,
       queue,
+      duration,
+      size,
     });
     res.json({ ok: true, resumedAt: resumeSeconds });
   } catch (err) {
