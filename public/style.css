@@ -150,14 +150,61 @@ select {
 }
 
 #nowPlaying {
-  margin-top: 1.5rem;
-  padding: 1rem;
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.25rem 1rem;
+  padding: 0.75rem 1.25rem 0.6rem;
   background: #1d1f26;
-  border-radius: 8px;
+  border-top: 1px solid #2a2c35;
+  box-shadow: 0 -8px 20px rgba(0, 0, 0, 0.4);
 }
 #nowPlaying.hidden { display: none; }
-#npControls { display: flex; align-items: center; gap: 0.75rem; margin-top: 0.5rem; }
-#npResumeNote { font-size: 0.85rem; color: #9ab; margin: 0.5rem 0 0; }
+#npInfo { min-width: 0; text-align: center; }
+#npTitle {
+  display: block;
+  font-size: 0.95rem;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+#npResumeNote { font-size: 0.8rem; color: #9ab; margin: 0.15rem 0 0; }
+#npControls { display: flex; align-items: center; justify-content: center; gap: 0.6rem; flex: 0 0 auto; }
+#npControls button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  padding: 0;
+  border-radius: 50%;
+  font-size: 1.1rem;
+  line-height: 1;
+}
+#npPosition { font-size: 0.8rem; color: #9ab; white-space: nowrap; }
+#npProgressTrack {
+  flex: 0 0 100%;
+  height: 3px;
+  background: #2a2c35;
+  overflow: hidden;
+  margin: -0.75rem -1.25rem 0;
+}
+#npProgressFill {
+  height: 100%;
+  width: 0%;
+  background: #3b82f6;
+  transition: width 0.4s linear;
+}
+
+/* Keep footer from overlapping the last list items */
+main { padding-bottom: 5.5rem; }
 
 /* --- Confirm modal --- */
 #modalOverlay {

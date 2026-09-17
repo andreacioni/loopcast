@@ -461,6 +461,9 @@ async function pollStatus() {
     showNowPlaying(s.title);
     el("npPosition").textContent =
       `${formatSeconds(s.position)} / ${formatSeconds(s.duration)}`;
+    const pct =
+      s.duration > 0 ? Math.min(100, (s.position / s.duration) * 100) : 0;
+    el("npProgressFill").style.width = `${pct}%`;
 
     if (s.lastResumeAttempt && !state.reportedResumeAt) {
       state.reportedResumeAt = s.lastResumeAttempt.at;
@@ -519,6 +522,7 @@ el("stopBtn").addEventListener("click", async () => {
     showToast(err.message);
   }
   el("nowPlaying").classList.add("hidden");
+  el("npProgressFill").style.width = "0%";
   clearInterval(statusTimer);
 });
 

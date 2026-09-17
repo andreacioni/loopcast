@@ -29,22 +29,28 @@
       <div id="continueWatchingTrack"></div>
     </section>
 
-    <section id="nowPlaying" class="hidden">
-      <h2 id="npTitle"></h2>
-      <div id="npControls">
-        <button id="pauseBtn">Pause / Play</button>
-        <button id="stopBtn">Stop</button>
-        <span id="npPosition"></span>
-      </div>
-      <p id="npResumeNote"></p>
-    </section>
-
     <nav id="breadcrumbs"></nav>
 
     <section id="browser">
       <ul id="itemList"></ul>
     </section>
   </main>
+
+  <!-- Now playing footer bar -->
+  <footer id="nowPlaying" class="hidden">
+    <div id="npProgressTrack">
+      <div id="npProgressFill"></div>
+    </div>
+    <div id="npInfo">
+      <span id="npTitle"></span>
+      <p id="npResumeNote"></p>
+    </div>
+    <div id="npControls">
+      <button id="pauseBtn" title="Pause / Play" aria-label="Pause / Play">⏯</button>
+      <button id="stopBtn" title="Stop" aria-label="Stop">⏹</button>
+      <span id="npPosition"></span>
+    </div>
+  </footer>
 
   <!-- Custom confirm dialog, replaces window.confirm -->
   <div id="modalOverlay" class="hidden">
