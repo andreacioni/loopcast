@@ -272,9 +272,10 @@ function renderContinueWatching(cards) {
         100,
         (item.resume.position / item.resume.duration) * 100,
       );
+      const completed = pct > 95;
       progressHtml = `
         <div class="progress-wrap">
-          <div class="progress-track"><div class="progress-fill${pct > 95 ? " progress-complete" : ""}" style="width:${pct}%"></div></div>
+          <div class="progress-track"><div class="progress-fill${completed ? " progress-complete" : ""}" style="width:${pct}%"></div></div>
           <span class="progress-time">${formatSeconds(item.resume.position)} / ${formatSeconds(item.resume.duration)}</span>
         </div>`;
     }
