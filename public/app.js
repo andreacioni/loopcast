@@ -267,12 +267,13 @@ function renderContinueWatching(cards) {
 
     const { item } = card;
     let progressHtml = "";
+    let completed = false;
     if (item.resume && item.resume.position > 0 && item.resume.duration > 0) {
       const pct = Math.min(
         100,
         (item.resume.position / item.resume.duration) * 100,
       );
-      const completed = pct > 95;
+      completed = pct > 95;
       progressHtml = `
         <div class="progress-wrap">
           <div class="progress-track"><div class="progress-fill${completed ? " progress-complete" : ""}" style="width:${pct}%"></div></div>
@@ -280,15 +281,60 @@ function renderContinueWatching(cards) {
         </div>`;
     }
 
+    const showNextBtn = completed && card.queue.length > 0;
+
     div.innerHTML = `
       <span class="cw-folder">&#128193; ${card.folderTitle}</span>
       <span class="cw-title">&#127916; ${item.title}</span>
       ${progressHtml}
-      ${card.queue.length ? `<span class="cw-queue-note">+${card.queue.length} up next</span>` : ""}`;
+      ${
+        card.queue.length
+          ? `<div class="cw-bottom-row">
+              <span class="cw-queue-note">+${card.queue.length} up next</span>
+              ${showNextBtn ? `<button class="cw-next-btn" title="Play next" aria-label="Play next">&#9193;</button>` : ""}
+            </div>`
+          : ""
+      }`;
+
+    if (showNextBtn) {
+      div.querySelector(".cw-next-btn").addEventListener("click", (e) => {
+        e.stopPropagation();
+        playNextInQueue(card);
+      });
+    }
 
     div.addEventListener("click", () => resumeCard(card));
     track.appendChild(div);
   });
+}
+
+async function playNextInQueue(card) {
+  if (!state.currentRendererUsn) {
+    showToast("Pick a renderer first.");
+    return;
+  }
+  const [next, ...rest] = card.queue;
+  try {
+    await api("/api/play", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        rendererUsn: state.currentRendererUsn,
+        itemId: next.id,
+        title: next.title,
+        mediaUrl: next.mediaUrl,
+        mimeType: next.mimeType,
+        dlnaFeatures: next.dlnaFeatures,
+        mediaKind: next.mediaKind,
+        duration: next.duration,
+        size: next.size,
+        resume: false,
+        queue: rest,
+      }),
+    });
+  } catch (err) {
+    showToast(`Playback failed: ${err.message}`);
+  }
 }
 
 async function resumeCard(card) {
