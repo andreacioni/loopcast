@@ -540,7 +540,7 @@ el("serverSelect").addEventListener("change", (e) => {
 el("rendererSelect").addEventListener("change", (e) => {
   state.currentRendererUsn = e.target.value;
 });
-el("pauseBtn").addEventListener("click", async () => {
+el("playPauseBtn").addEventListener("click", async () => {
   try {
     await api("/api/control", {
       method: "POST",
