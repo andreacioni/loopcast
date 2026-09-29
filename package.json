@@ -5,7 +5,7 @@
   "main": "server.js",
   "type": "commonjs",
   "scripts": {
-    "package-app": "rm -rf public/* && cd app && npm run build && cp -r dist/* ../public",
+    "package-app": "cd app && npm run build",
     "start": "node server.js"
   },
   "dependencies": {

@@ -8,7 +8,7 @@ const { getResume, listResumable, close: closeDb } = require("./lib/db");
 
 const app = express();
 app.use(express.json());
-app.use(express.static(path.join(__dirname, "public")));
+app.use(express.static(path.join(__dirname, "app/dist")));
 
 const PORT = process.env.PORT || 3000;
 
