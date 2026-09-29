@@ -5,6 +5,7 @@
   "main": "server.js",
   "type": "commonjs",
   "scripts": {
+    "prestart": "cd app && npm run build -- --logLevel=warn && cp -r dist/* ../public",
     "start": "node server.js"
   },
   "dependencies": {
