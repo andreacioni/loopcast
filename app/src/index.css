@@ -63,11 +63,57 @@ main {
   margin: 0 0 0.6rem;
   color: #ccc;
 }
+.cw-carousel {
+  position: relative;
+}
 #continueWatchingTrack {
   display: flex;
   gap: 0.9rem;
   overflow-x: auto;
   padding-bottom: 0.4rem;
+  scroll-behavior: smooth;
+  scrollbar-width: none;
+}
+#continueWatchingTrack::-webkit-scrollbar {
+  display: none;
+}
+.cw-scroll-zone {
+  position: absolute;
+  top: 0;
+  bottom: 0.4rem;
+  display: flex;
+  align-items: center;
+  width: 4rem;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+.cw-scroll-zone.cw-scroll-zone-prev {
+  left: 0;
+  justify-content: flex-start;
+  background: linear-gradient(to right, #14151a 20%, transparent);
+  mask-image: linear-gradient(to right, #000 60%, transparent);
+}
+.cw-scroll-zone.cw-scroll-zone-next {
+  right: 0;
+  justify-content: flex-end;
+  background: linear-gradient(to left, #14151a 20%, transparent);
+  mask-image: linear-gradient(to left, #000 60%, transparent);
+}
+.cw-scroll-btn {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  padding: 0;
+  margin: 0 0.4rem;
+  border-radius: 50%;
+  background: #1d1f26;
+  border: 1px solid #2a2c35;
+}
+.cw-scroll-btn:hover {
+  background: #23252e;
 }
 .cw-card {
   flex: 0 0 220px;
